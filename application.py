@@ -1,11 +1,11 @@
 import os
 import requests
 
-from flask import Flask, session
+from flask import Flask, session, render_template, request
 from flask_session import Session
 from sqlalchemy import create_engine
 from sqlalchemy.orm import scoped_session, sessionmaker
-
+from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
 
@@ -23,6 +23,30 @@ engine = create_engine(os.getenv("DATABASE_URL"))
 db = scoped_session(sessionmaker(bind=engine))
 
 
-@app.route("/")
+@app.route("/", methods=["POST","GET"])
 def index():
-    return "Project 1: TODO"
+    if request.method == "GET":
+        return render_template("login.html", message=None)
+    else:
+        check = db.execute("SELECT id FROM users WHERE username = :username AND hash = :password",
+        {"username" : request.form.get("username"), "hash":request.form.get("password")})
+        if check.id is not None:
+            pass
+        
+
+@app.route("/Registration", methods=["POST","GET"])
+def register():
+    if request.method == "GET":
+        return render_template("register.html")
+    else:
+        username = request.form.get("username")
+        check = db.execute("SELECT id FROM users WHERE username = :username",
+        {"username":username}).fetchone
+        if check is not None:
+            return render_template("error.html", message="Username already Taken", past="'register'")
+        else:
+            passhash = generate_password_hash(request.form.get("password"))
+            db.execute("INSERT INTO users(username, hash) VALUES (:username, :hash)",
+            {"username" : username, "hash" : passhash})
+            return render_template("login.html", message = "Registered!")
+    
