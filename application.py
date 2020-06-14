@@ -1,7 +1,7 @@
 import os
 import requests
 
-from flask import Flask, session, render_template, request
+from flask import Flask, session, render_template, request, redirect
 from flask_session import Session
 from sqlalchemy import create_engine
 from sqlalchemy.orm import scoped_session, sessionmaker
@@ -23,21 +23,15 @@ engine = create_engine(os.getenv("DATABASE_URL"))
 db = scoped_session(sessionmaker(bind=engine))
 
 
-@app.route("/", methods=["POST","GET"])
+@app.route("/")
 def index():
-    if request.method == "GET":
-        return render_template("login.html", message=None)
-    else:
-        hashed = db.execute("SELECT * FROM users WHERE username = :username",
-        {"username" : request.form.get("username")}).fetchone()
-        if hashed == None:
-            return render_template("login.html", message="Username not found")
-        else:
-            if check_password_hash(hashed.hash, request.form.get("password")):
-                return render_template("login.html", message = "Success!")
-            else:
-                return render_template("login.html", message = "Error: Password didn't match")
+    if not 'user_id' in session:
+        return redirect("/login")
+
+    name = db.execute("SELECT username FROM users WHERE id = :user_id",{"user_id":session["user_id"]}).fetchone()
+    return render_template("index.html", name = name.username)
         
+
 @app.route("/Registration", methods=["POST","GET"])
 def register():
     if request.method == "GET":
@@ -52,4 +46,30 @@ def register():
         {"username" : username, "hash" : passhash})
         db.commit()
         return render_template("login.html", message = "Registered!")
-        
+
+
+
+@app.route("/login", methods=["POST", "GET"])
+def login():
+    if request.method == "GET":
+        return render_template("login.html", message=None)
+    else:
+        hashed = db.execute("SELECT * FROM users WHERE username = :username",
+        {"username" : request.form.get("username")}).fetchone()
+        if hashed == None:
+            return render_template("login.html", message="Username not found")
+        else:
+            if check_password_hash(hashed.hash, request.form.get("password")):
+                session["user_id"] = hashed.id
+                return redirect("/")
+            else:
+                return render_template("login.html", message = "Error: Password didn't match")
+
+@app.route("/logout")
+def logout():
+    if not 'user_id' in session:
+        return redirect("/login")
+
+    session.clear()
+
+    return redirect("/")
