@@ -35,6 +35,8 @@ def index():
         else:
             if check_password_hash(hashed.hash, request.form.get("password")):
                 return render_template("login.html", message = "Success!")
+            else:
+                return render_template("login.html", message = "Error: Password didn't match")
         
 @app.route("/Registration", methods=["POST","GET"])
 def register():
@@ -43,14 +45,10 @@ def register():
     else:
         username = request.form.get("username")
         passhash = generate_password_hash(request.form.get("password"))
-        check = db.execute("SELECT * FROM users WHERE username = :username",
-                           {"username": username}).fetchall()
-        print(check)
-        if check != None:
-            return render_template("error.html", message="Username already Taken", past="/Registration")
-
-        else:
-            db.execute("INSERT INTO users(username, hash) VALUES (:username, :hash)",
-            {"username" : username, "hash" : passhash})
-            db.commit()
-            return render_template("login.html", message = "Registered!")
+        if db.execute("SELECT * FROM users WHERE username = :username", {"username": username}).fetchall():
+            return render_template("error.html", message = "username already exists", past = "/Registration")
+     
+        db.execute("INSERT INTO users(username, hash) VALUES (:username, :hash)",
+        {"username" : username, "hash" : passhash})
+        db.commit()
+        return render_template("login.html", message = "Registered!")
