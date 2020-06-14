@@ -16,20 +16,23 @@
 
 <form action="{{ url_for('login') }}" method="POST">
     <div class="form-row">
-    <div class="form-group col-md-2">
-        <label for="Username">Username</label>
-        <input type="text" class="form-control input" id="InputText2" name="username">
+        <div class="form-group col-md-4">
+            <label for="Username">Username</label>
+            <input type="text" class="form-control input" id="InputText2" name="username">
+        </div>
     </div>
-    <div class="form-group col-md-2">
-        <label for="Password">Password</label>
-        <input type="password" class="form-control input" id="InputPassword2" name="password">
+    <div class="form-row">
+        <div class="form-group col-md-4">
+            <label for="Password">Password</label>
+            <input type="password" class="form-control input" id="InputPassword2" name="password">
+        </div>
     </div>
     </div>
-    <button type="submit" class="btn btn-primary">Submit</button>
+    <button type="submit" class="btn btn-primary">Log in</button>
 </form>
 </br>
 <p>Not a member? <a href="{{ url_for('register') }}">Register here</a></p>
 
-<img src="{{ url_for('static', filename = 'q4nuthe1v3y41.jpg') }}">
+<img src="{{ url_for('static', filename = 'q4nuthe1v3y41.jpg') }}" alt="A painting describing the pain felt by the soldiers in war">
 
 {% endblock %}

@@ -65,6 +65,7 @@ def login():
             else:
                 return render_template("login.html", message = "Error: Password didn't match")
 
+
 @app.route("/logout")
 def logout():
     if not 'user_id' in session:
@@ -73,3 +74,13 @@ def logout():
     session.clear()
 
     return redirect("/")
+
+
+@app.route("/search", methods=["POST", "GET"])
+def search():
+    if not 'user_id' in session:
+        return redirect("/")
+
+    if request.method == "GET":
+        return "searching for"
+    
