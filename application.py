@@ -82,5 +82,21 @@ def search():
         return redirect("/")
 
     if request.method == "GET":
-        return "searching for"
+        return render_template("search.html")
+    else:
+        year = request.form.get("year")
+
+        if year == '':
+            year = None
+
+        try:
+            year = int(year)
+        except:
+            year = None
+
+        results = db.execute("SELECT * FROM books WHERE isbn = :isbn OR title = :title OR author = :author OR year = :year",
+        {"isbn" : request.form.get("isbn"), "title": request.form.get("title"),
+        "author" : request.form.get("author"), "year" : year }).fetchall()
+        
+        return render_template("results.html", results = results)
     

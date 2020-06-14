@@ -1,0 +1,36 @@
+{% extends 'layout.html' %}
+
+{% block title %}
+Search
+{% endblock %}
+
+{% block body %}
+<form action="{{ url_for('search') }}" method="POST">
+    <div class="form-row">
+        <div class="form-group col-md-4">
+            <label for="Search">ISBN</label>
+            <input type="text" class="form-control input" id="InputText2" name="isbn">
+        </div>
+    </div>
+    <div class="form-row">
+        <div class="form-group col-md-4">
+            <label for="Search">Title</label>
+            <input type="text" class="form-control input" id="InputText2" name="title">
+        </div>
+    </div>
+    <div class="form-row">
+        <div class="form-group col-md-4">
+            <label for="Search">Author</label>
+            <input type="text" class="form-control input" id="InputText2" name="author">
+        </div>
+    </div>
+    <div class="form-row">
+        <div class="form-group col-md-4">
+            <label for="Search">Year</label>
+            <input type="text" class="form-control input" id="InputText2" name="year">
+        </div>
+    </div>
+    
+    <button type="submit" class="btn btn-primary">Search</button>
+</form>
+{% endblock %}

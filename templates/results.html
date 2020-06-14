@@ -1,0 +1,36 @@
+{% extends 'layout.html' %}
+
+{% block title %}
+Results
+{% endblock %}
+
+{% block body %}
+{% if results %}
+    <table class="table table-striped table-dark">
+        <thead>
+            <tr>
+                <th scope="col">ISBN</th>
+                <th scope="col">Title</th>
+                <th scope="col">Author</th>
+                <th scope="col">Year</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for isbn, title, author, year in results %}
+                <tr>
+                    <th>{{ isbn }}</th>
+                    <td>{{ title }}</td>
+                    <td>{{ author }}</td>
+                    <td>{{ year }}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% else %}
+    <h1>No Results</h1>
+
+{% endif %}
+
+</br>
+<a href="{{ url_for('index') }}">Return to Home</a>
+{% endblock %}
