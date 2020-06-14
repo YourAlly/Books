@@ -52,3 +52,4 @@ def register():
         {"username" : username, "hash" : passhash})
         db.commit()
         return render_template("login.html", message = "Registered!")
+        
