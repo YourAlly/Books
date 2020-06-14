@@ -42,15 +42,15 @@ def register():
         return render_template("register.html")
     else:
         username = request.form.get("username")
-        passw = request.form.get("password")
-        passhash = generate_password_hash(passw)
+        passhash = generate_password_hash(request.form.get("password"))
         check = db.execute("SELECT * FROM users WHERE username = :username",
-                           {"username": username}).fetchone()
-        if check == None:
-            return render_template("error.html", message="Username already Taken", past="'register'")
+                           {"username": username}).fetchall()
+        print(check)
+        if check != None:
+            return render_template("error.html", message="Username already Taken", past="/Registration")
+
         else:
             db.execute("INSERT INTO users(username, hash) VALUES (:username, :hash)",
             {"username" : username, "hash" : passhash})
             db.commit()
             return render_template("login.html", message = "Registered!")
-    
