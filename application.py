@@ -28,9 +28,11 @@ def index():
     if not 'user_id' in session:
         return redirect("/login")
 
-    name = db.execute("SELECT username FROM users WHERE id = :user_id",{"user_id":session["user_id"]}).fetchone()
+    name = db.execute("SELECT username FROM users WHERE id = :user_id",
+    {"user_id":session["user_id"]}).fetchone()
+
     return render_template("index.html", name = name.username)
-        
+
 
 @app.route("/Registration", methods=["POST","GET"])
 def register():
@@ -39,9 +41,12 @@ def register():
     else:
         username = request.form.get("username")
         passhash = generate_password_hash(request.form.get("password"))
-        if db.execute("SELECT * FROM users WHERE username = :username", {"username": username}).fetchall():
-            return render_template("error.html", message = "username already exists", past = "/Registration")
-     
+
+        if db.execute("SELECT * FROM users WHERE username = :username",
+        {"username": username}).fetchall():
+            return render_template("error.html", message =
+             "username already exists", past = "/Registration")
+
         db.execute("INSERT INTO users(username, hash) VALUES (:username, :hash)",
         {"username" : username, "hash" : passhash})
         db.commit()
@@ -63,7 +68,8 @@ def login():
                 session["user_id"] = hashed.id
                 return redirect("/")
             else:
-                return render_template("login.html", message = "Error: Password didn't match")
+                return render_template("login.html", message = 
+                "Error: Password didn't match")
 
 
 @app.route("/logout")
@@ -94,9 +100,9 @@ def search():
         except:
             year = None
 
-        results = db.execute("SELECT * FROM books WHERE isbn = :isbn OR title = :title OR author = :author OR year = :year",
+        results = db.execute("SELECT * FROM books WHERE " +
+        "isbn = :isbn OR title = :title OR author = :author OR year = :year",
         {"isbn" : request.form.get("isbn"), "title": request.form.get("title"),
         "author" : request.form.get("author"), "year" : year }).fetchall()
-        
+
         return render_template("results.html", results = results)
-    
