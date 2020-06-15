@@ -1,3 +1,5 @@
 # WWWWWWWEEEEEEEEEEE
 
 WEEEEEEEEEEEEEEEEEEEE
+
+DB URI: postgres://zdjteslysggzzf:1c8d30e2be185f2ac9b721523503df538c036f9ebbc988aa3a154c42a6c517ea@ec2-52-202-146-43.compute-1.amazonaws.com:5432/dpp7e82v5enir
