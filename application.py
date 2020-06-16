@@ -90,19 +90,27 @@ def search():
     if request.method == "GET":
         return render_template("search.html")
     else:
-        year = request.form.get("year")
+        if request.form.get("title") == '':
+            title = None
+        else:
+            title = "%" + request.form.get("title") + "%"
 
+        if request.form.get("author") == '':
+            author = None
+        else:
+            author = "%" + request.form.get("author") + "%"
+
+        year = request.form.get("year")
         if year == '':
             year = None
-
         try:
             year = int(year)
         except:
             year = None
 
         results = db.execute("SELECT * FROM books WHERE " +
-        "isbn = :isbn OR title = :title OR author = :author OR year = :year",
-        {"isbn" : request.form.get("isbn"), "title": request.form.get("title"),
-        "author" : request.form.get("author"), "year" : year }).fetchall()
+        "isbn = :isbn OR title LIKE :title OR author LIKE :author OR year = :year",
+        {"isbn" : request.form.get("isbn"), "title": title,
+        "author" : author, "year" : year }).fetchall()
 
         return render_template("results.html", results = results)
