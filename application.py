@@ -41,7 +41,7 @@ def index():
 @app.route("/login", methods=["POST", "GET"])
 def login():
 
-    # Checks if it's a GET request treats it as POST otherwise
+    # Checks if it's a get request and treats it as post otherwise
     if request.method == "GET":
         return render_template("login.html", message=None)
     else:
