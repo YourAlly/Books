@@ -22,18 +22,42 @@ Session(app)
 engine = create_engine(os.getenv("DATABASE_URL"))
 db = scoped_session(sessionmaker(bind=engine))
 
-
+# Index
 @app.route("/")
 def index():
+
+    # Redirects to /login if not yet logged in
     if not 'user_id' in session:
         return redirect("/login")
 
+    # Gets the name of the user
     name = db.execute("SELECT username FROM users WHERE id = :user_id",
     {"user_id":session["user_id"]}).fetchone()
 
     return render_template("index.html", name = name.username)
 
 
+# Checks if form input exists in the Table
+@app.route("/login", methods=["POST", "GET"])
+def login():
+    if request.method == "GET":
+        return render_template("login.html", message=None)
+    else:
+        # Checks if the username exists
+        hashed = db.execute("SELECT * FROM users WHERE username = :username",
+                            {"username": request.form.get("username")}).fetchone()
+        if hashed == None:
+            return render_template("login.html", message="Username not found")
+        else:
+            # Checks if the password matches
+            if check_password_hash(hashed.hash, request.form.get("password")):
+                session["user_id"] = hashed.id
+                return redirect("/")
+            else:
+                return render_template("login.html", message="Error: Password didn't match")
+
+
+# Adds a row to the users table
 @app.route("/Registration", methods=["POST","GET"])
 def register():
     if request.method == "GET":
@@ -42,6 +66,7 @@ def register():
         username = request.form.get("username")
         passhash = generate_password_hash(request.form.get("password"))
 
+        # Checks if username already exists, and redirects to an error if it does
         if db.execute("SELECT * FROM users WHERE username = :username",
         {"username": username}).fetchall():
             return render_template("error.html", message =
@@ -53,27 +78,10 @@ def register():
         return render_template("login.html", message = "Registered!")
 
 
-
-@app.route("/login", methods=["POST", "GET"])
-def login():
-    if request.method == "GET":
-        return render_template("login.html", message=None)
-    else:
-        hashed = db.execute("SELECT * FROM users WHERE username = :username",
-        {"username" : request.form.get("username")}).fetchone()
-        if hashed == None:
-            return render_template("login.html", message="Username not found")
-        else:
-            if check_password_hash(hashed.hash, request.form.get("password")):
-                session["user_id"] = hashed.id
-                return redirect("/")
-            else:
-                return render_template("login.html", message = 
-                "Error: Password didn't match")
-
-
+# Clears the session
 @app.route("/logout")
 def logout():
+    # Refer to line 29
     if not 'user_id' in session:
         return redirect("/login")
 
@@ -82,14 +90,17 @@ def logout():
     return redirect("/")
 
 
+# Returns either rendered template of "search.html" or "results.html"
 @app.route("/search", methods=["POST", "GET"])
 def search():
+    # Refer to line 29
     if not 'user_id' in session:
         return redirect("/")
 
     if request.method == "GET":
         return render_template("search.html")
     else:
+        # Changes form values to None if input is equal to ''
         if request.form.get("title") == '':
             title = None
         else:
@@ -114,3 +125,4 @@ def search():
         "author" : author, "year" : year }).fetchall()
 
         return render_template("results.html", results = results)
+
