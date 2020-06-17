@@ -22,6 +22,7 @@ Session(app)
 engine = create_engine(os.getenv("DATABASE_URL"))
 db = scoped_session(sessionmaker(bind=engine))
 
+
 # Index
 @app.route("/")
 def index():
@@ -93,6 +94,7 @@ def logout():
 # Returns either rendered template of "search.html" or "results.html"
 @app.route("/search", methods=["POST", "GET"])
 def search():
+    
     # Refer to line 29
     if not 'user_id' in session:
         return redirect("/")
