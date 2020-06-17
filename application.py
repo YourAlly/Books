@@ -1,5 +1,4 @@
 import os
-import requests
 
 from flask import Flask, session, render_template, request, redirect
 from flask_session import Session
@@ -27,7 +26,7 @@ db = scoped_session(sessionmaker(bind=engine))
 @app.route("/")
 def index():
 
-    # Redirects to /login if not yet logged in
+    # Redirects to /login if the user's not logged in
     if not 'user_id' in session:
         return redirect("/login")
 
@@ -38,9 +37,11 @@ def index():
     return render_template("index.html", name = name.username)
 
 
-# Checks if form input exists in the Table
+# Checks if form input exists in the table
 @app.route("/login", methods=["POST", "GET"])
 def login():
+
+    # Checks if it's a GET request treats it as POST otherwise
     if request.method == "GET":
         return render_template("login.html", message=None)
     else:
@@ -61,6 +62,8 @@ def login():
 # Adds a row to the users table
 @app.route("/Registration", methods=["POST","GET"])
 def register():
+
+    # Refer to line 45
     if request.method == "GET":
         return render_template("register.html")
     else:
@@ -82,10 +85,12 @@ def register():
 # Clears the session
 @app.route("/logout")
 def logout():
+
     # Refer to line 29
     if not 'user_id' in session:
         return redirect("/login")
 
+    # Clears the session and redirects the user back to the homepage
     session.clear()
 
     return redirect("/")
@@ -94,11 +99,12 @@ def logout():
 # Returns either rendered template of "search.html" or "results.html"
 @app.route("/search", methods=["POST", "GET"])
 def search():
-    
+
     # Refer to line 29
     if not 'user_id' in session:
         return redirect("/")
 
+    # Refer to line 45
     if request.method == "GET":
         return render_template("search.html")
     else:
