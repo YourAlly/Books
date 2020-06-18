@@ -10,7 +10,6 @@ if not os.getenv("DATABASE_URL"):
 engine = create_engine(os.getenv("DATABASE_URL"))
 db = scoped_session(sessionmaker(bind=engine))
 
-
 def main():
     with open("books.csv") as file:
         books = csv.reader(file)
@@ -25,7 +24,6 @@ def main():
 
         db.commit()
         print("DONE!")
-
 
 if __name__ == '__main__':
     main()

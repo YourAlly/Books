@@ -21,7 +21,6 @@ Session(app)
 engine = create_engine(os.getenv("DATABASE_URL"))
 db = scoped_session(sessionmaker(bind=engine))
 
-
 # Index
 @app.route("/")
 def index():
@@ -58,7 +57,6 @@ def login():
             else:
                 return render_template("login.html", message="Error: Password didn't match")
 
-
 # Adds a row to the users table
 @app.route("/Registration", methods=["POST","GET"])
 def register():
@@ -81,7 +79,6 @@ def register():
         db.commit()
         return render_template("login.html", message = "Registered!")
 
-
 # Clears the session
 @app.route("/logout")
 def logout():
@@ -95,9 +92,8 @@ def logout():
 
     return redirect("/")
 
-
-# Returns either rendered template of "search.html" or "results.html"
-@app.route("/search", methods=["POST", "GET"])
+# Returns either a rendered template of "search.html" and posts to /results
+@app.route("/search")
 def search():
 
     # Refer to line 29
@@ -107,30 +103,49 @@ def search():
     # Refer to line 45
     if request.method == "GET":
         return render_template("search.html")
+
+# Returns a rendered template of results.html
+@app.route("/results", methods=["POST", "GET"])
+def results():
+    if request.method == "GET":
+        return redirect("/search")
+    # Refer to line 29
+    if not 'user_id' in session:
+        return redirect("/")
+
+    # Changes form values to None if input is equal to ''
+    if request.form.get("title") == '':
+        title = None
     else:
-        # Changes form values to None if input is equal to ''
-        if request.form.get("title") == '':
-            title = None
-        else:
-            title = "%" + request.form.get("title") + "%"
+        title = "%" + request.form.get("title") + "%"
 
-        if request.form.get("author") == '':
-            author = None
-        else:
-            author = "%" + request.form.get("author") + "%"
+    if request.form.get("author") == '':
+        author = None
+    else:
+        author = "%" + request.form.get("author") + "%"
 
-        year = request.form.get("year")
-        if year == '':
-            year = None
-        try:
-            year = int(year)
-        except:
-            year = None
+    year = request.form.get("year")
+    if year == '':
+        year = None
+    try:
+        year = int(year)
+    except:
+        year = None
 
-        results = db.execute("SELECT * FROM books WHERE " +
-        "isbn = :isbn OR title LIKE :title OR author LIKE :author OR year = :year",
-        {"isbn" : request.form.get("isbn"), "title": title,
-        "author" : author, "year" : year }).fetchall()
+    results = db.execute("SELECT * FROM books WHERE " +
+    "isbn = :isbn OR title LIKE :title OR author LIKE :author OR year = :year",
+    {"isbn" : request.form.get("isbn"), "title": title,
+    "author" : author, "year" : year }).fetchall()
 
-        return render_template("results.html", results = results)
+    return render_template("results.html", results= results)
 
+# Returns the a page with all of the books
+@app.route("/books")
+def books():
+    results = db.execute("SELECT * FROM books").fetchall()
+    return render_template("results.html", results= results)
+
+# Returns a page of a book
+@app.route("/books/<string:isbn>")
+def book(isbn):
+    return isbn

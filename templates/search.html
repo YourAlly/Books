@@ -5,7 +5,10 @@ Search
 {% endblock %}
 
 {% block body %}
-<form action="{{ url_for('search') }}" method="POST">
+<a href="{{ url_for('index') }}">Go back</a>
+</br></br>
+
+<form action="{{ url_for('results') }}" method="POST">
     <div class="form-row">
         <div class="form-group col-md-4">
             <label for="Search">ISBN</label>
