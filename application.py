@@ -1,4 +1,5 @@
 import os
+import requests
 
 from flask import Flask, session, render_template, request, redirect
 from flask_session import Session
@@ -7,6 +8,9 @@ from sqlalchemy.orm import scoped_session, sessionmaker
 from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
+
+if not os.getenv("API_KEY"):
+    raise RuntimeError("API_KEY not set")
 
 # Check for environment variable
 if not os.getenv("DATABASE_URL"):
@@ -29,12 +33,7 @@ def index():
     if not 'user_id' in session:
         return redirect("/login")
 
-    # Gets the name of the user
-    name = db.execute("SELECT username FROM users WHERE id = :user_id",
-    {"user_id":session["user_id"]}).fetchone()
-
-    return render_template("index.html", name = name.username)
-
+    return render_template("index.html", name = None)
 
 # Checks if form input exists in the table
 @app.route("/login", methods=["POST", "GET"])
@@ -53,7 +52,7 @@ def login():
             # Checks if the password matches
             if check_password_hash(hashed.hash, request.form.get("password")):
                 session["user_id"] = hashed.id
-                return redirect("/")
+                return render_template("index.html", name=request.form.get("username"))
             else:
                 return render_template("login.html", message="Error: Password didn't match")
 
@@ -139,13 +138,19 @@ def results():
 
     return render_template("results.html", results= results)
 
-# Returns the a page with all of the books
+# Returns a page with all of the books
 @app.route("/books")
 def books():
     results = db.execute("SELECT * FROM books").fetchall()
     return render_template("results.html", results= results)
 
-# Returns a page of a book
+# Returns a page that includes the details of the selected book
 @app.route("/books/<string:isbn>")
 def book(isbn):
-    return isbn
+    result = db.execute("SELECT * FROM books WHERE isbn = :isbn",
+    {"isbn" : isbn}).fetchone()
+    
+    if result:
+        return render_template("book.html", book = result)
+    else:
+        return render_template("error.html", message="Book didn't exist", past="index.html")

@@ -5,9 +5,12 @@ Index
 {% endblock %}
 
 {% block body %}
-<div class="alert alert-primary" role="alert">
-   Welcome {{ name }}!
-</div>
+    {% if name %}
+        <div class="alert alert-primary" role="alert">
+            Welcome {{ name }}!
+        </div>
+    {% endif %}
+    
 <a href="{{ url_for('logout') }}">Logout</a>
 <h1>Books</h1>
 
