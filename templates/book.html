@@ -5,6 +5,8 @@
 {% endblock %}
 
 {% block body %}
+    <a href="{{ url_for('index') }}">Back to home</a>
+    </br>
     <h1>{{ book.title }}</h1>
     <h3>
         <ul>
@@ -12,5 +14,23 @@
             <li>Author: {{ book.author }}</li>
             <li>Year: {{ book.year }}</li>
         </ul>
+        Submit Review:
+
+        <h4>
+            Reviews:
+                {% for review in reviews %}
+                    </br>
+                    <div class="review">
+                        {{ review.user }}: {% for i in range(review.user_score) %}*{% endfor %}
+                        <ul>
+                            {% if review.text %}
+                                <li>{{ review.text }}</li>
+                            {% else %}
+                                <li>No details</li>
+                            {% endif %}
+                        </ul>
+                    </div>
+                {% endfor %}
+        </h4>
     </h3>
 {% endblock %}

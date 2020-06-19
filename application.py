@@ -1,6 +1,7 @@
 import os
 import requests
 
+from myclasses import Review
 from flask import Flask, session, render_template, request, redirect
 from flask_session import Session
 from sqlalchemy import create_engine
@@ -9,12 +10,12 @@ from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
 
-if not os.getenv("API_KEY"):
-    raise RuntimeError("API_KEY not set")
-
-# Check for environment variable
+# Check for environment variables
 if not os.getenv("DATABASE_URL"):
     raise RuntimeError("DATABASE_URL is not set")
+
+if not os.getenv("API_KEY"):
+    raise RuntimeError("API_KEY is not set")
 
 # Configure session to use filesystem
 app.config["SESSION_PERMANENT"] = False
@@ -73,6 +74,7 @@ def register():
             return render_template("error.html", message =
              "username already exists", past = "/Registration")
 
+        # Inserts to table otherwise
         db.execute("INSERT INTO users(username, hash) VALUES (:username, :hash)",
         {"username" : username, "hash" : passhash})
         db.commit()
@@ -145,12 +147,20 @@ def books():
     return render_template("results.html", results= results)
 
 # Returns a page that includes the details of the selected book
-@app.route("/books/<string:isbn>")
+@app.route("/books/<string:isbn>", methods=["POST", "GET"])
 def book(isbn):
     result = db.execute("SELECT * FROM books WHERE isbn = :isbn",
     {"isbn" : isbn}).fetchone()
-    
+    table = db.execute("SELECT * FROM reviews WHERE book_isbn = :isbn",
+    {"isbn" : isbn}).fetchall()
+    reviews = []
+    for row in table:
+        name = db.execute("SELECT * FROM users WHERE id = :user_id",
+        {"user_id" : row.user_id}).fetchone()
+        print(int(row.score))
+        review = Review(name.username, row.review, int(row.score))
+        reviews.append(review)
     if result:
-        return render_template("book.html", book = result)
+        return render_template("book.html", book = result, reviews = reviews)
     else:
         return render_template("error.html", message="Book didn't exist", past="index.html")
