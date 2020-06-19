@@ -160,7 +160,7 @@ def book(isbn):
 
     res = requests.get("https://www.goodreads.com/book/review_counts.json",
                        params={"key": os.getenv("API_KEY"), "isbns": isbn})
-
+    
     if request.method == "GET":
         result = db.execute("SELECT * FROM books WHERE isbn = :isbn",
                             {"isbn" : isbn}).fetchone()
@@ -169,8 +169,10 @@ def book(isbn):
         reviews = []
         reviewed = False
         for row in table:
+            # Checks if the book's already reviewed by the user
             if int(session['user_id']) == int(row.user_id):
                 reviewed = True
+
             name = db.execute("SELECT * FROM users WHERE id = :user_id",
                                 {"user_id" : row.user_id}).fetchone()
             print(int(row.score))
@@ -185,6 +187,7 @@ def book(isbn):
             return render_template("error.html", message="Book didn't exist", 
             past=url_for('search'))
 
+# Posts form input to the reviews table
 @app.route("/post/<int:user_id>/<string:isbn>", methods=["POST"])
 def post(user_id, isbn):
     try:
@@ -204,6 +207,7 @@ def post(user_id, isbn):
     posted = Review(user_id, name.username, isbn, score, text)
     reviews = db.execute("SELECT * FROM reviews WHERE book_isbn = :isbn",
                         {"isbn" : isbn}).fetchall()
+
     reviewed = False
 
     # Checks if the book's already reviewed by the user
@@ -217,7 +221,7 @@ def post(user_id, isbn):
                     + "WHERE book_isbn = :isbn AND user_id = :user_id",
                     {'score' : posted.user_score, 'text' : posted.user_review, 'isbn' : posted.book_isbn,
                     'user_id' : posted.user_id})
-        db.commit()
+        
     
     # If not insert into the table instead
     else:
@@ -225,6 +229,7 @@ def post(user_id, isbn):
                     "VALUES (:user_id, :isbn, :score, :review)",
                     {'user_id' : posted.user_id, 'isbn' : posted.book_isbn,
                     'score' : posted.user_score, 'review' : posted.user_review})
-        db.commit()
-
+    
+    # Commits and redirects to the book
+    db.commit()
     return redirect(url_for('book', isbn=isbn))
