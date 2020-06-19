@@ -26,8 +26,8 @@
 
                             {{ review.user }}: {% for i in range(review.user_score) %}*{% endfor %}
                             <ul>
-                                {% if review.text %}
-                                    <li>{{ review.text }}</li>
+                                {% if review.user_review %}
+                                    <li>{{ review.user_review }}</li>
                                 {% else %}
                                     <li>No details</li>
                                 {% endif %}
@@ -44,7 +44,7 @@
 
     {% if reviewed %}Edit{% else %}Submit{% endif %} Review:
     <div class="container" style="margin-left: 20px;">
-        <form action="{{ url_for('book', isbn=isbn) }}" method="POST">
+        <form action="{{ url_for('post',user_id=user, isbn=book.isbn) }}" method="POST">
             <div class="form-group">
                 <div class="form-check form-check-inline">
                     <input class="form-check-input" type="radio" name="review_score" id="inlineRadio1" value="1">
@@ -84,8 +84,8 @@
                     <div class="container" style="margin-left: 20px;">
                         {{ review.user }}: {% for i in range(review.user_score) %}*{% endfor %}
                         <ul>
-                            {% if review.text %}
-                                <li>{{ review.text }}</li>
+                            {% if review.user_review %}
+                                <li>{{ review.user_review }}</li>
                             {% else %}
                                 <li>No details</li>
                             {% endif %}

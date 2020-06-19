@@ -158,6 +158,9 @@ def book(isbn):
     if not 'user_id' in session:
         return redirect("/")
 
+    res = requests.get("https://www.goodreads.com/book/review_counts.json",
+                       params={"key": os.getenv("API_KEY"), "isbns": isbn})
+
     if request.method == "GET":
         result = db.execute("SELECT * FROM books WHERE isbn = :isbn",
                             {"isbn" : isbn}).fetchone()
@@ -171,55 +174,57 @@ def book(isbn):
             name = db.execute("SELECT * FROM users WHERE id = :user_id",
                                 {"user_id" : row.user_id}).fetchone()
             print(int(row.score))
-            review = Review(name.username, row.review, int(row.score), int(row.user_id))
+            review = Review(int(row.user_id), name.username,
+                            int(isbn),  int(row.score), row.review)
             reviews.append(review)
             
         if result:
-            return render_template("book.html", book = result, isbn = isbn,
+            return render_template("book.html", book = result, data=res.json(),
             reviews = reviews, user=session["user_id"], reviewed=reviewed)
         else:
             return render_template("error.html", message="Book didn't exist", 
             past=url_for('search'))
 
+@app.route("/post/<int:user_id>/<string:isbn>", methods=["POST"])
+def post(user_id, isbn):
+    try:
+        score = int(request.form.get("review_score"))
+    except:
+        return render_template("error.html", message="Data Type input error", 
+        past=url_for('books', isbn=isbn))
+
+    if request.form.get("review") == '':
+        text = None
     else:
-        try:
-            score = int(request.form.get("review_score"))
-        except:
-            return render_template("error.html", message="Data Type input error", 
-            past=url_for('books', isbn=isbn))
+        text = request.form.get("review")
 
-        if request.form.get("review") == '':
-            text = None
-        else:
-            text = request.form.get("review")
+    name = db.execute("SELECT * FROM users WHERE id = :user_id",
+                        {"user_id": user_id}).fetchone()
 
-        name = db.execute("SELECT * FROM users WHERE id = :user_id",
-                          {"user_id": session['user_id']}).fetchone()
+    posted = Review(user_id, name.username, isbn, score, text)
+    reviews = db.execute("SELECT * FROM reviews WHERE book_isbn = :isbn",
+                        {"isbn" : isbn}).fetchall()
+    reviewed = False
 
-        posted = Review(name.username, text, score, session['user_id'])
-        reviews = db.execute("SELECT * FROM reviews WHERE book_isbn = :isbn",
-                            {"isbn" : isbn}).fetchall()
-        reviewed = False
+    # Checks if the book's already reviewed by the user
+    for review in reviews:
+        if review.user_id == posted.user_id:
+            reviewed = True
 
-        # Checks if the book's already reviewed by the user
-        for review in reviews:
-            if review.user_id == posted.user_id:
-                reviewed = True
+    # If already reviewed, update the table
+    if reviewed:
+        db.execute("UPDATE reviews SET score = :score, review = :text " 
+                    + "WHERE book_isbn = :isbn AND user_id = :user_id",
+                    {'score' : posted.user_score, 'text' : posted.user_review, 'isbn' : posted.book_isbn,
+                    'user_id' : posted.user_id})
+        db.commit()
+    
+    # If not insert into the table instead
+    else:
+        db.execute("INSERT INTO reviews (user_id, book_isbn, score, review) " +
+                    "VALUES (:user_id, :isbn, :score, :review)",
+                    {'user_id' : posted.user_id, 'isbn' : posted.book_isbn,
+                    'score' : posted.user_score, 'review' : posted.user_review})
+        db.commit()
 
-        # If already reviewed, update the table
-        if reviewed:
-            db.execute("UPDATE reviews SET score = :score, review = :text " 
-                        + "WHERE book_isbn = :isbn AND user_id = :user_id",
-                        {'score' : posted.user_score, 'text' : posted.text, 'isbn' : isbn,
-                        'user_id' : posted.user_id})
-            db.commit()
-        
-        # If not insert into the table instead
-        else:
-            db.execute("INSERT INTO reviews (user_id, book_isbn, score, review) " +
-                        "VALUES (:user_id, :isbn, :score, :review)",
-                        {'user_id' : posted.user_id, 'isbn' : isbn,
-                        'score' : posted.user_score, 'review' : posted.text})
-            db.commit()
-
-        return redirect(url_for('book', isbn=isbn))
+    return redirect(url_for('book', isbn=isbn))
