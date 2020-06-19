@@ -2,7 +2,7 @@ import os
 import requests
 
 from myclasses import Review
-from flask import Flask, session, render_template, request, redirect
+from flask import Flask, session, render_template, request, redirect, url_for
 from flask_session import Session
 from sqlalchemy import create_engine
 from sqlalchemy.orm import scoped_session, sessionmaker
@@ -34,7 +34,7 @@ def index():
     if not 'user_id' in session:
         return redirect("/login")
 
-    return render_template("index.html", name = None)
+    return render_template("index.html")
 
 # Checks if form input exists in the table
 @app.route("/login", methods=["POST", "GET"])
@@ -44,16 +44,18 @@ def login():
     if request.method == "GET":
         return render_template("login.html", message=None)
     else:
+
         # Checks if the username exists
         hashed = db.execute("SELECT * FROM users WHERE username = :username",
                             {"username": request.form.get("username")}).fetchone()
         if hashed == None:
             return render_template("login.html", message="Username not found")
         else:
+
             # Checks if the password matches
             if check_password_hash(hashed.hash, request.form.get("password")):
                 session["user_id"] = hashed.id
-                return render_template("index.html", name=request.form.get("username"))
+                return redirect(url_for('index'))
             else:
                 return render_template("login.html", message="Error: Password didn't match")
 
@@ -72,7 +74,7 @@ def register():
         if db.execute("SELECT * FROM users WHERE username = :username",
         {"username": username}).fetchall():
             return render_template("error.html", message =
-             "username already exists", past = "/Registration")
+             "username already exists", past = url_for('register'))
 
         # Inserts to table otherwise
         db.execute("INSERT INTO users(username, hash) VALUES (:username, :hash)",
@@ -90,7 +92,6 @@ def logout():
 
     # Clears the session and redirects the user back to the homepage
     session.clear()
-
     return redirect("/")
 
 # Returns either a rendered template of "search.html" and posts to /results
@@ -110,6 +111,7 @@ def search():
 def results():
     if request.method == "GET":
         return redirect("/search")
+        
     # Refer to line 29
     if not 'user_id' in session:
         return redirect("/")
@@ -126,50 +128,98 @@ def results():
         author = "%" + request.form.get("author") + "%"
 
     year = request.form.get("year")
+
     if year == '':
         year = None
+
     try:
         year = int(year)
     except:
         year = None
 
-    results = db.execute("SELECT * FROM books WHERE " +
-    "isbn = :isbn OR title LIKE :title OR author LIKE :author OR year = :year",
-    {"isbn" : request.form.get("isbn"), "title": title,
-    "author" : author, "year" : year }).fetchall()
+    results = db.execute("SELECT * FROM books WHERE isbn = :isbn OR " + 
+                        "title LIKE :title OR author LIKE :author OR year = :year",
+                        {"isbn" : request.form.get("isbn"), "title": title, 
+                        "author" : author, "year" : year }).fetchall()
 
-    return render_template("results.html", results= results)
+    return render_template("results.html", results=results)
 
 # Returns a page with all of the books
 @app.route("/books")
 def books():
     results = db.execute("SELECT * FROM books").fetchall()
-    return render_template("results.html", results= results)
+    return render_template("results.html", results=results)
 
 # Returns a page that includes the details of the selected book
 @app.route("/books/<string:isbn>", methods=["POST", "GET"])
 def book(isbn):
+
     # Refer to line 29
     if not 'user_id' in session:
         return redirect("/")
 
-    result = db.execute("SELECT * FROM books WHERE isbn = :isbn",
-    {"isbn" : isbn}).fetchone()
-    table = db.execute("SELECT * FROM reviews WHERE book_isbn = :isbn",
-    {"isbn" : isbn}).fetchall()
-    reviews = []
-    reviewed = False
-    for row in table:
-        if int(session['user_id']) == int(row.user_id):
-            reviewed = True
-        name = db.execute("SELECT * FROM users WHERE id = :user_id",
-        {"user_id" : row.user_id}).fetchone()
-        print(int(row.score))
-        review = Review(name.username, row.review, int(row.score), int(row.user_id))
-        reviews.append(review)
-        
-    if result:
-        return render_template("book.html", book = result,
-         reviews = reviews, user=session["user_id"], reviewed=reviewed)
+    if request.method == "GET":
+        result = db.execute("SELECT * FROM books WHERE isbn = :isbn",
+                            {"isbn" : isbn}).fetchone()
+        table = db.execute("SELECT * FROM reviews WHERE book_isbn = :isbn",
+                            {"isbn" : isbn}).fetchall()
+        reviews = []
+        reviewed = False
+        for row in table:
+            if int(session['user_id']) == int(row.user_id):
+                reviewed = True
+            name = db.execute("SELECT * FROM users WHERE id = :user_id",
+                                {"user_id" : row.user_id}).fetchone()
+            print(int(row.score))
+            review = Review(name.username, row.review, int(row.score), int(row.user_id))
+            reviews.append(review)
+            
+        if result:
+            return render_template("book.html", book = result, isbn = isbn,
+            reviews = reviews, user=session["user_id"], reviewed=reviewed)
+        else:
+            return render_template("error.html", message="Book didn't exist", 
+            past=url_for('search'))
+
     else:
-        return render_template("error.html", message="Book didn't exist", past="index.html")
+        try:
+            score = int(request.form.get("review_score"))
+        except:
+            return render_template("error.html", message="Data Type input error", 
+            past=url_for('books', isbn=isbn))
+
+        if request.form.get("review") == '':
+            text = None
+        else:
+            text = request.form.get("review")
+
+        name = db.execute("SELECT * FROM users WHERE id = :user_id",
+                          {"user_id": session['user_id']}).fetchone()
+
+        posted = Review(name.username, text, score, session['user_id'])
+        reviews = db.execute("SELECT * FROM reviews WHERE book_isbn = :isbn",
+                            {"isbn" : isbn}).fetchall()
+        reviewed = False
+
+        # Checks if the book's already reviewed by the user
+        for review in reviews:
+            if review.user_id == posted.user_id:
+                reviewed = True
+
+        # If already reviewed, update the table
+        if reviewed:
+            db.execute("UPDATE reviews SET score = :score, review = :text " 
+                        + "WHERE book_isbn = :isbn AND user_id = :user_id",
+                        {'score' : posted.user_score, 'text' : posted.text, 'isbn' : isbn,
+                        'user_id' : posted.user_id})
+            db.commit()
+        
+        # If not insert into the table instead
+        else:
+            db.execute("INSERT INTO reviews (user_id, book_isbn, score, review) " +
+                        "VALUES (:user_id, :isbn, :score, :review)",
+                        {'user_id' : posted.user_id, 'isbn' : isbn,
+                        'score' : posted.user_score, 'review' : posted.text})
+            db.commit()
+
+        return redirect(url_for('book', isbn=isbn))
