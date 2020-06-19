@@ -149,18 +149,27 @@ def books():
 # Returns a page that includes the details of the selected book
 @app.route("/books/<string:isbn>", methods=["POST", "GET"])
 def book(isbn):
+    # Refer to line 29
+    if not 'user_id' in session:
+        return redirect("/")
+
     result = db.execute("SELECT * FROM books WHERE isbn = :isbn",
     {"isbn" : isbn}).fetchone()
     table = db.execute("SELECT * FROM reviews WHERE book_isbn = :isbn",
     {"isbn" : isbn}).fetchall()
     reviews = []
+    reviewed = False
     for row in table:
+        if int(session['user_id']) == int(row.user_id):
+            reviewed = True
         name = db.execute("SELECT * FROM users WHERE id = :user_id",
         {"user_id" : row.user_id}).fetchone()
         print(int(row.score))
-        review = Review(name.username, row.review, int(row.score))
+        review = Review(name.username, row.review, int(row.score), int(row.user_id))
         reviews.append(review)
+        
     if result:
-        return render_template("book.html", book = result, reviews = reviews)
+        return render_template("book.html", book = result,
+         reviews = reviews, user=session["user_id"], reviewed=reviewed)
     else:
         return render_template("error.html", message="Book didn't exist", past="index.html")
