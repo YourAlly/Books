@@ -2,7 +2,7 @@ import os
 import requests
 
 from myclasses import Review
-from flask import Flask, session, render_template, request, redirect, url_for
+from flask import Flask, session, render_template, request, redirect, url_for, jsonify, abort
 from flask_session import Session
 from sqlalchemy import create_engine
 from sqlalchemy.orm import scoped_session, sessionmaker
@@ -20,6 +20,7 @@ if not os.getenv("API_KEY"):
 # Configure session to use filesystem
 app.config["SESSION_PERMANENT"] = False
 app.config["SESSION_TYPE"] = "filesystem"
+app.config['JSON_SORT_KEYS'] = False
 Session(app)
 
 # Set up database
@@ -78,7 +79,7 @@ def register():
 
         # Inserts to table otherwise
         db.execute("INSERT INTO users(username, hash) VALUES (:username, :hash)",
-        {"username" : username, "hash" : passhash})
+        {"username": username, "hash": passhash})
         db.commit()
         return render_template("login.html", message = "Registered!")
 
@@ -139,8 +140,8 @@ def results():
 
     results = db.execute("SELECT * FROM books WHERE isbn = :isbn OR " + 
                         "title LIKE :title OR author LIKE :author OR year = :year",
-                        {"isbn" : request.form.get("isbn"), "title": title, 
-                        "author" : author, "year" : year }).fetchall()
+                        {"isbn": request.form.get("isbn"), "title": title, 
+                        "author": author, "year": year }).fetchall()
 
     return render_template("results.html", results=results)
 
@@ -163,9 +164,9 @@ def book(isbn):
     
     if request.method == "GET":
         result = db.execute("SELECT * FROM books WHERE isbn = :isbn",
-                            {"isbn" : isbn}).fetchone()
+                            {"isbn": isbn}).fetchone()
         table = db.execute("SELECT * FROM reviews WHERE book_isbn = :isbn",
-                            {"isbn" : isbn}).fetchall()
+                            {"isbn": isbn}).fetchall()
         reviews = []
         reviewed = False
         for row in table:
@@ -174,7 +175,7 @@ def book(isbn):
                 reviewed = True
 
             name = db.execute("SELECT * FROM users WHERE id = :user_id",
-                                {"user_id" : row.user_id}).fetchone()
+                                {"user_id": row.user_id}).fetchone()
             print(int(row.score))
             review = Review(int(row.user_id), name.username,
                             int(isbn),  int(row.score), row.review)
@@ -190,6 +191,11 @@ def book(isbn):
 # Posts form input to the reviews table
 @app.route("/post/<int:user_id>/<string:isbn>", methods=["POST"])
 def post(user_id, isbn):
+
+    # Refer to line 29
+    if not 'user_id' in session:
+        return redirect("/")
+
     try:
         score = int(request.form.get("review_score"))
     except:
@@ -206,7 +212,7 @@ def post(user_id, isbn):
 
     posted = Review(user_id, name.username, isbn, score, text)
     reviews = db.execute("SELECT * FROM reviews WHERE book_isbn = :isbn",
-                        {"isbn" : isbn}).fetchall()
+                        {"isbn": isbn}).fetchall()
 
     reviewed = False
 
@@ -219,17 +225,41 @@ def post(user_id, isbn):
     if reviewed:
         db.execute("UPDATE reviews SET score = :score, review = :text " 
                     + "WHERE book_isbn = :isbn AND user_id = :user_id",
-                    {'score' : posted.user_score, 'text' : posted.user_review, 'isbn' : posted.book_isbn,
-                    'user_id' : posted.user_id})
+                    {'score': posted.user_score, 'text': posted.user_review, 'isbn': posted.book_isbn,
+                    'user_id': posted.user_id})
         
     
     # If not insert into the table instead
     else:
         db.execute("INSERT INTO reviews (user_id, book_isbn, score, review) " +
                     "VALUES (:user_id, :isbn, :score, :review)",
-                    {'user_id' : posted.user_id, 'isbn' : posted.book_isbn,
-                    'score' : posted.user_score, 'review' : posted.user_review})
+                    {'user_id': posted.user_id, 'isbn': posted.book_isbn,
+                    'score': posted.user_score, 'review': posted.user_review})
     
     # Commits and redirects to the book
     db.commit()
     return redirect(url_for('book', isbn=isbn))
+
+@app.route("/api/<string:isbn>")
+def api(isbn):
+    book_data = db.execute("SELECT * FROM books WHERE isbn = :isbn",
+                           {'isbn': isbn}).fetchone()
+
+    # Returns a 404 if book not found
+    if not book_data:
+        abort(404)
+
+    res = requests.get("https://www.goodreads.com/book/review_counts.json",
+                       params={"key": os.getenv("API_KEY"), "isbns": isbn})
+    goodreads_data = res.json()
+    goodreads_data = goodreads_data['books'][0]
+
+    # Returns a JSON as response
+    return jsonify({
+        "title": book_data.title,
+        "author": book_data.author,
+        "year": book_data.year,
+        "isbn": isbn,
+        "review_count": int(goodreads_data['reviews_count']),
+        "average_score": float(goodreads_data['average_rating'])
+    })
