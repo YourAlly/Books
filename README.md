@@ -1,5 +1,4 @@
-# Project 1
-
+# Book something project
 Testing out the capabilities of Flask with SQLAlchemy
 
 Steps in running:
