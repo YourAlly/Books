@@ -101,7 +101,7 @@ def search():
 
     # Refer to line 29
     if not 'user_id' in session:
-        return redirect("/")
+        return redirect("/login")
 
     # Refer to line 45
     if request.method == "GET":
@@ -115,7 +115,7 @@ def results():
         
     # Refer to line 29
     if not 'user_id' in session:
-        return redirect("/")
+        return redirect("/login")
 
     # Changes form values to None if input is equal to ''
     if request.form.get("title") == '':
@@ -148,6 +148,10 @@ def results():
 # Returns a page with all of the books
 @app.route("/books")
 def books():
+    # Refer to line 29
+    if not 'user_id' in session:
+        return redirect("/login")
+    
     results = db.execute("SELECT * FROM books").fetchall()
     return render_template("results.html", results=results)
 
@@ -157,7 +161,7 @@ def book(isbn):
 
     # Refer to line 29
     if not 'user_id' in session:
-        return redirect("/")
+        return redirect("/login")
 
     res = requests.get("https://www.goodreads.com/book/review_counts.json",
                        params={"key": os.getenv("API_KEY"), "isbns": isbn})
@@ -194,7 +198,7 @@ def post(user_id, isbn):
 
     # Refer to line 29
     if not 'user_id' in session:
-        return redirect("/")
+        return redirect("/login")
 
     try:
         score = int(request.form.get("review_score"))
